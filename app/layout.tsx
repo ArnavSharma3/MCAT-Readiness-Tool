@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tasks",
-  description: "Local task tracker",
+  title: "Calm MCAT Readiness",
+  description: "A gentle MCAT readiness companion for focused prep.",
 };
 
 export default function RootLayout({
