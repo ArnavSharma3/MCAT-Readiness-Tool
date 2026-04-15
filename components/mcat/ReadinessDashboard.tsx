@@ -19,6 +19,13 @@ export function ReadinessDashboard() {
     flScores: [],
     targetScore: 512,
   });
+  const [sectionInputDrafts, setSectionInputDrafts] = useState<Record<McatSection, string>>({
+    "C/P": String(DEFAULT_SECTION_SCORES["C/P"]),
+    CARS: String(DEFAULT_SECTION_SCORES.CARS),
+    "B/B": String(DEFAULT_SECTION_SCORES["B/B"]),
+    "P/S": String(DEFAULT_SECTION_SCORES["P/S"]),
+  });
+  const [targetInputDraft, setTargetInputDraft] = useState("512");
   const [nextFlScore, setNextFlScore] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
 
@@ -27,6 +34,13 @@ export function ReadinessDashboard() {
     if (raw) {
       const parsed = JSON.parse(raw) as ReadinessState;
       setState(parsed);
+      setSectionInputDrafts({
+        "C/P": String(parsed.sectionScores["C/P"]),
+        CARS: String(parsed.sectionScores.CARS),
+        "B/B": String(parsed.sectionScores["B/B"]),
+        "P/S": String(parsed.sectionScores["P/S"]),
+      });
+      setTargetInputDraft(String(parsed.targetScore));
     }
     setLoaded(true);
   }, []);
@@ -49,14 +63,27 @@ export function ReadinessDashboard() {
   const progressToTarget = Math.max(0, Math.min(1, (projectedScore - 472) / Math.max(1, state.targetScore - 472)));
 
   const handleSectionChange = (section: McatSection, value: string) => {
-    const parsed = Number.parseInt(value, 10);
+    setSectionInputDrafts((current) => ({ ...current, [section]: value.replace(/[^\d]/g, "") }));
+  };
+
+  const commitSectionScore = (section: McatSection) => {
+    const parsed = Number.parseInt(sectionInputDrafts[section], 10);
+    const normalized = Number.isNaN(parsed) ? state.sectionScores[section] : clampSectionScore(parsed);
     setState((current) => ({
       ...current,
       sectionScores: {
         ...current.sectionScores,
-        [section]: Number.isNaN(parsed) ? 118 : clampSectionScore(parsed),
+        [section]: normalized,
       },
     }));
+    setSectionInputDrafts((current) => ({ ...current, [section]: String(normalized) }));
+  };
+
+  const commitTargetScore = () => {
+    const parsed = Number.parseInt(targetInputDraft, 10);
+    const normalized = Number.isNaN(parsed) ? state.targetScore : Math.min(528, Math.max(472, parsed));
+    setState((current) => ({ ...current, targetScore: normalized }));
+    setTargetInputDraft(String(normalized));
   };
 
   const addFlScore = () => {
@@ -77,16 +104,12 @@ export function ReadinessDashboard() {
         <label className="text-sm">
           <span className="mr-2 text-[var(--muted)]">Target score</span>
           <input
-            type="number"
-            min={472}
-            max={528}
-            value={state.targetScore}
-            onChange={(event) =>
-              setState((current) => ({
-                ...current,
-                targetScore: Math.min(528, Math.max(472, Number.parseInt(event.target.value, 10) || 472)),
-              }))
-            }
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={targetInputDraft}
+            onChange={(event) => setTargetInputDraft(event.target.value.replace(/[^\d]/g, ""))}
+            onBlur={commitTargetScore}
             className="w-24 rounded-xl border bg-[var(--card-soft)] px-3 py-2 text-center outline-none ring-[var(--focus-ring)] focus:ring"
           />
         </label>
@@ -97,11 +120,12 @@ export function ReadinessDashboard() {
           <label key={section} className="rounded-2xl border bg-[var(--card-soft)] p-3">
             <div className="text-xs text-[var(--muted)]">{section}</div>
             <input
-              type="number"
-              min={118}
-              max={132}
-              value={state.sectionScores[section]}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={sectionInputDrafts[section]}
               onChange={(event) => handleSectionChange(section, event.target.value)}
+              onBlur={() => commitSectionScore(section)}
               className="mt-2 w-full rounded-xl border bg-white px-3 py-2 text-lg font-medium outline-none ring-[var(--focus-ring)] focus:ring"
             />
           </label>
